@@ -3,7 +3,7 @@ import { viteStaticCopy } from 'vite-plugin-static-copy';
 import glsl from 'vite-plugin-glsl';
 
 export default defineConfig({
-    base: "/three_vite_xr",
+    base: "/Brainwashed_XR",
     clearScreen: false,
     optimizeDeps: {
         esbuildOptions: {
@@ -19,6 +19,12 @@ export default defineConfig({
     },
     build: {
         sourcemap: true,
+        assetsDir: 'assets',
+        rollupOptions: {
+            input: {
+                main: '/index.html'
+            }
+        }
     },
     server: {
         open: true
@@ -31,10 +37,10 @@ export default defineConfig({
                 { src: 'node_modules/three/examples/jsm/libs/draco/gltf/draco_decoder.js', dest: 'jsm/libs/draco/gltf' },
                 { src: 'node_modules/three/examples/jsm/libs/draco/gltf/draco_decoder.wasm', dest: 'jsm/libs/draco/gltf/' },
                 { src: 'node_modules/three/examples/jsm/libs/draco/gltf/draco_encoder.js', dest: 'jsm/libs/draco/gltf/' },
-                { src: 'node_modules/three/examples/jsm/libs/draco/gltf/draco_wasm_wrapper.js', dest: 'jsm/libs/draco/gltf/' }
+                { src: 'node_modules/three/examples/jsm/libs/draco/gltf/draco_wasm_wrapper.js', dest: 'jsm/libs/draco/gltf/' },
+                { src: 'models/*', dest: 'models/' }
             ]
         }),
         glsl()
     ]
 })
-

@@ -268,7 +268,7 @@ const init = async () => {
 
   // Load brain model
   const loader = new GLTFLoader();
-  loader.load('assets/Brain.glb', (gltf) => {
+  loader.load('/Brainwashed_XR/assets/Brain.glb', (gltf) => {
     setupBrainModel(gltf);
   });
 
