@@ -28,11 +28,11 @@ import {
 } from './node_modules/three/src/Three.js';
 
 // XR Emulator
-import { DevUI } from '@iwer/devui';
-import { XRDevice, metaQuest3 } from 'iwer';
+//import { DevUI } from './node_modules/@iwer/devui/lib/index.js';
+//import { XRDevice, metaQuest3 } from './node_modules/iwer/lib/index.js';
 
 // XR
-import { XRButton } from 'three/addons/webxr/XRButton.js';
+import { XRButton } from './node_modules/three/examples/jsm/webxr/XRButton.js';
 
 // If you prefer to import the whole library, with the THREE prefix, use the following line instead:
 // import * as THREE from 'three'
