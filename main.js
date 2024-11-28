@@ -25,7 +25,7 @@ import {
   Scene,
   WebGLRenderer,
   Raycaster
-} from 'three';
+} from 'three/src/Three.js';
 
 // XR Emulator
 import { DevUI } from '@iwer/devui';
