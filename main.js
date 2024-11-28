@@ -2,7 +2,6 @@ import {
   Scene,
   PerspectiveCamera,
   WebGLRenderer,
-  Color,
   PointLight,
   AmbientLight,
   Raycaster,
@@ -20,14 +19,15 @@ import {
 
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { XRButton } from 'three/addons/webxr/XRButton.js';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-let scene, camera, renderer, brainModel, controls;
+let scene, camera, renderer, brainModel;
 let controller;
 let score = 0;
 let timeLeft = 60;
 let gameActive = false;
 let currentGreenPointIndex = -1;
+let isDragging = false;
+let previousTouch = null;
 
 // Matériaux pour les points
 const pinkMaterial = new PointsMaterial({
@@ -46,7 +46,6 @@ const greenMaterial = new PointsMaterial({
 
 // UI Setup
 const setupGameUI = () => {
-  // Score Display
   const scoreDisplay = document.createElement('div');
   scoreDisplay.id = 'score-display';
   scoreDisplay.style.cssText = `
@@ -59,10 +58,10 @@ const setupGameUI = () => {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     z-index: 1000;
     pointer-events: none;
+    display: none;
   `;
   document.body.appendChild(scoreDisplay);
 
-  // Timer Display
   const timerDisplay = document.createElement('div');
   timerDisplay.id = 'timer-display';
   timerDisplay.style.cssText = `
@@ -75,65 +74,75 @@ const setupGameUI = () => {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     z-index: 1000;
     pointer-events: none;
+    display: none;
   `;
   document.body.appendChild(timerDisplay);
 
-  // Start Button
-  const startButton = document.createElement('button');
-  startButton.id = 'start-button';
-  startButton.style.cssText = `
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    padding: 1rem 2rem;
-    font-size: 1.2rem;
-    border: 2px solid #00ff9d;
-    background: rgba(0, 0, 0, 0.7);
-    color: #fff;
-    cursor: pointer;
-    z-index: 1000;
-  `;
-  startButton.textContent = 'Start Game';
-  startButton.onclick = startGame;
-  document.body.appendChild(startButton);
-
-  return { scoreDisplay, timerDisplay, startButton };
+  return { scoreDisplay, timerDisplay };
 };
 
 const updateUIDisplays = () => {
   const scoreDisplay = document.getElementById('score-display');
   const timerDisplay = document.getElementById('timer-display');
-  if (scoreDisplay) scoreDisplay.textContent = `Score: ${score}`;
-  if (timerDisplay) timerDisplay.textContent = `Time: ${timeLeft}s`;
+  if (scoreDisplay) {
+    scoreDisplay.textContent = `Score: ${score}`;
+    scoreDisplay.style.display = 'block';
+  }
+  if (timerDisplay) {
+    timerDisplay.textContent = `Time: ${timeLeft}s`;
+    timerDisplay.style.display = 'block';
+  }
+};
+
+// Touch controls for model rotation
+const handleTouchStart = (event) => {
+  isDragging = true;
+  previousTouch = {
+    x: event.touches[0].clientX,
+    y: event.touches[0].clientY
+  };
+};
+
+const handleTouchMove = (event) => {
+  if (!isDragging || !brainModel) return;
+
+  const touch = event.touches[0];
+  const deltaX = touch.clientX - previousTouch.x;
+  const deltaY = touch.clientY - previousTouch.y;
+
+  brainModel.rotation.y += deltaX * 0.01;
+  brainModel.rotation.x += deltaY * 0.01;
+
+  previousTouch = {
+    x: touch.clientX,
+    y: touch.clientY
+  };
+};
+
+const handleTouchEnd = () => {
+  isDragging = false;
+  previousTouch = null;
 };
 
 // Game Logic
 const startGame = () => {
-  score = 0;
-  timeLeft = 60;
-  gameActive = true;
-  
-  const startButton = document.getElementById('start-button');
-  if (startButton) startButton.style.display = 'none';
-  
-  updateUIDisplays();
-  updateGreenPoint();
-  startTimer();
+  if (!gameActive) {
+    score = 0;
+    timeLeft = 60;
+    gameActive = true;
+    updateUIDisplays();
+    updateGreenPoint();
+    startTimer();
+  }
 };
 
 const endGame = () => {
   gameActive = false;
   
-  const startButton = document.getElementById('start-button');
-  if (startButton) {
-    startButton.style.display = 'block';
-    startButton.innerHTML = `
-      <div style="color: #00ff9d; margin-bottom: 10px;">Game Over!</div>
-      <div>Final Score: ${score}</div>
-      <div style="font-size: 0.8em; margin-top: 10px;">Click to play again</div>
-    `;
-  }
+  const scoreDisplay = document.getElementById('score-display');
+  const timerDisplay = document.getElementById('timer-display');
+  if (scoreDisplay) scoreDisplay.style.display = 'none';
+  if (timerDisplay) timerDisplay.style.display = 'none';
 
   if (currentGreenPointIndex !== -1) {
     resetPointColor(currentGreenPointIndex);
@@ -188,20 +197,29 @@ const updateGreenPoint = () => {
   greenPoint.name = 'greenPoint';
   greenPoint.scale.copy(brainModel.scale);
   greenPoint.position.copy(brainModel.position);
+  greenPoint.rotation.copy(brainModel.rotation);
 
   // Créer la sphère de collision
   const collisionGeometry = new SphereGeometry(0.15);
   const collisionMaterial = new MeshBasicMaterial({ visible: false });
   const collisionSphere = new Mesh(collisionGeometry, collisionMaterial);
-  collisionSphere.position.set(
-    greenPointPosition[0] * brainModel.scale.x + brainModel.position.x,
-    greenPointPosition[1] * brainModel.scale.y + brainModel.position.y,
-    greenPointPosition[2] * brainModel.scale.z + brainModel.position.z
-  );
+  
+  const worldPosition = new Vector3(
+    greenPointPosition[0],
+    greenPointPosition[1],
+    greenPointPosition[2]
+  ).applyMatrix4(brainModel.matrixWorld);
+  
+  collisionSphere.position.copy(worldPosition);
   collisionSphere.name = 'greenPointCollider';
 
   scene.add(greenPoint);
   scene.add(collisionSphere);
+};
+
+const resetPointColor = (index) => {
+  if (!brainModel || index === -1) return;
+  currentGreenPointIndex = -1;
 };
 
 // XR Controller Event Handler
@@ -219,72 +237,15 @@ const onSelect = (event) => {
   if (collisionSphere) {
     const intersects = raycaster.intersectObject(collisionSphere);
     if (intersects.length > 0) {
-      // Point touché
       score++;
       updateUIDisplays();
       updateGreenPoint();
       
-      // Feedback haptique
       if (controller.gamepad && controller.gamepad.hapticActuators) {
         controller.gamepad.hapticActuators[0].pulse(0.8, 100);
       }
     }
   }
-};
-
-// Initialisation
-const init = async () => {
-  // Scene setup
-  scene = new Scene();
-  scene.background = new Color(0x000000);
-
-  // Camera setup
-  camera = new PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-  camera.position.set(0, 1.6, 3);
-
-  // Renderer setup
-  renderer = new WebGLRenderer({ antialias: true });
-  renderer.setPixelRatio(window.devicePixelRatio);
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.xr.enabled = true;
-  document.body.appendChild(renderer.domElement);
-
-  // XR setup
-  const xrButton = XRButton.createButton(renderer);
-  document.body.appendChild(xrButton);
-
-  // Controller setup
-  controller = renderer.xr.getController(0);
-  controller.addEventListener('select', onSelect);
-  scene.add(controller);
-
-  // Lights
-  const pointLight = new PointLight(0xffffff, 1, 100);
-  pointLight.position.set(5, 5, 5);
-  scene.add(pointLight);
-
-  const ambientLight = new AmbientLight(0x404040, 0.5);
-  scene.add(ambientLight);
-
-  // Load brain model
-  const loader = new GLTFLoader();
-  loader.load('/Brainwashed_XR/assets/Brain.glb', (gltf) => {
-    setupBrainModel(gltf);
-  });
-
-  // UI Setup
-  setupGameUI();
-
-  // Controls
-  controls = new OrbitControls(camera, renderer.domElement);
-  controls.target.set(0, 1.6, 0);
-  controls.update();
-
-  // Event listeners
-  window.addEventListener('resize', onWindowResize, false);
-
-  // Animation loop
-  renderer.setAnimationLoop(animate);
 };
 
 const setupBrainModel = (gltf) => {
@@ -314,14 +275,78 @@ const setupBrainModel = (gltf) => {
   const scale = 5 / maxDim;
 
   brainModel.scale.set(scale, scale, scale);
-  brainModel.position.set(0, 1.6, -2); // Positionné devant l'utilisateur en VR
+  brainModel.position.set(0, 1.6, -2);
   
-  scene.add(brainModel);
+  // On n'ajoute pas le modèle à la scène immédiatement
+  // Il sera ajouté lors de l'entrée en VR
+};
+
+// Initialisation
+const init = async () => {
+  scene = new Scene();
+  
+  camera = new PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+  camera.position.set(0, 1.6, 3);
+
+  renderer = new WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.xr.enabled = true;
+  document.body.appendChild(renderer.domElement);
+
+  // Style de la page blanche
+  document.body.style.backgroundColor = 'white';
+  renderer.domElement.style.display = 'none'; // Cache le canvas jusqu'à l'entrée en VR
+
+  // Modified XR Button
+  const xrButton = XRButton.createButton(renderer);
+  document.body.appendChild(xrButton);
+
+  renderer.xr.addEventListener('sessionstart', () => {
+    renderer.domElement.style.display = 'block';  // Affiche le canvas
+    scene.add(brainModel);  // Ajoute le modèle à la scène
+  });
+
+  renderer.xr.addEventListener('sessionend', () => {
+    renderer.domElement.style.display = 'none';  // Cache le canvas
+    scene.remove(brainModel);  // Retire le modèle de la scène
+    endGame();  // Termine le jeu si en cours
+  });
+
+  controller = renderer.xr.getController(0);
+  controller.addEventListener('select', onSelect);
+  controller.addEventListener('selectstart', startGame);  // Démarre le jeu au premier clic
+  scene.add(controller);
+
+  const pointLight = new PointLight(0xffffff, 1, 100);
+  pointLight.position.set(5, 5, 5);
+  scene.add(pointLight);
+
+  const ambientLight = new AmbientLight(0x404040, 0.5);
+  scene.add(ambientLight);
+
+  const loader = new GLTFLoader();
+  loader.load('/Brainwashed_XR/assets/Brain.glb', (gltf) => {
+    setupBrainModel(gltf);
+  });
+
+  setupGameUI();
+
+  // Touch event listeners (actifs uniquement en VR)
+  renderer.domElement.addEventListener('touchstart', handleTouchStart, false);
+  renderer.domElement.addEventListener('touchmove', handleTouchMove, false);
+  renderer.domElement.addEventListener('touchend', handleTouchEnd, false);
+  
+  window.addEventListener('resize', onWindowResize, false);
+  renderer.setAnimationLoop(animate);
 };
 
 const animate = () => {
-  if (brainModel && !renderer.xr.isPresenting) {
-    controls.update();
+  if (brainModel && scene.getObjectById(brainModel.id)) {  // Vérifie si le modèle est dans la scène
+    const greenPoint = scene.getObjectByName('greenPoint');
+    if (greenPoint) {
+      greenPoint.rotation.copy(brainModel.rotation);
+    }
   }
   renderer.render(scene, camera);
 };
@@ -332,5 +357,4 @@ const onWindowResize = () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 };
 
-// Démarrage
 init();
