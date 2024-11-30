@@ -4,7 +4,7 @@ import glsl from 'vite-plugin-glsl';
 import path from 'path';
 
 export default defineConfig({
-    base: "/three_vite_xr",
+    base: "/Brainwashed_XR/",
     clearScreen: false,
     optimizeDeps: {
         esbuildOptions: {
