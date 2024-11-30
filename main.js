@@ -28,20 +28,20 @@ import {
 } from 'three';
 
 // XR Emulator
-import { DevUI } from './node_modules/@iwer/devui/lib/index.js';
-import { XRDevice, metaQuest3 } from './node_modules/iwer/lib/index.js';
+//import { DevUI } from './node_modules/@iwer/devui/lib/index.js';
+//import { XRDevice, metaQuest3 } from './node_modules/iwer/lib/index.js';
 
 // XR
-import { XRButton } from './node_modules/three/examples/jsm/webxr/XRButton.js';
+import { XRButton } from 'three/examples/jsm/webxr/XRButton.js';
 
 // Consider using alternatives like Oimo or cannon-es
 import {
   OrbitControls
-} from './node_modules/three/addons/controls/OrbitControls.js';
+} from 'three/addons/controls/OrbitControls.js';
 
 import {
   GLTFLoader
-} from './node_modules/three/addons/loaders/GLTFLoader.js';
+} from 'three/addons/loaders/GLTFLoader.js';
 
 // Example of hard link to official repo for data, if needed
 // const MODEL_PATH = 'https://raw.githubusercontent.com/mrdoob/js/r148/examples/models/gltf/LeePerrySmith/LeePerrySmith.glb';
